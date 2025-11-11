@@ -1,0 +1,46 @@
+:root {
+  --color-background: #111210;
+  --color-surface-0: #151714;
+  --color-surface-1: #1A1C19;
+  --color-surface-2: #1F211E;
+
+  --color-text: #F5F9F2;
+  --color-text-dim: #A7ABA4;
+
+  --color-primary: #85B960;
+  --color-primary-shade: #6EA148;
+  --color-primary-shadier: #61933A;
+  --color-primary-disabled: #86967C;
+
+  --color-error: #FC7476;
+
+  --font-title: normal bold 24px "Lexend", sans-serif;
+  --font-heading: normal bold 20px "Lexend", sans-serif;
+  --font-subtitle: normal normal 14px "Lexend", sans-serif;
+  --font-content: normal normal 16px "Lexend", sans-serif;
+  --font-heading-small: normal bold 16px "Lexend", sans-serif;
+  --font-label: normal normal 16px "Lexend", sans-serif;
+
+  --z-modal-cancel: 1;
+  --z-modal-content: 2;
+  --z-dropdown-cancel: 3;
+  --z-dropdown-select: 4;
+}
+
+html {
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text);
+  font: var(--font-content);
+  margin: 0;
+  padding: 0;
+}
