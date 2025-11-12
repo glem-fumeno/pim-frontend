@@ -11,7 +11,7 @@ const showModal = () => {
 };
 
 defineExpose({
-  show: showModal,
+  open: showModal,
   close: (): void => dialog.value?.close(),
   visible,
 });
@@ -19,7 +19,7 @@ defineExpose({
 
 <template>
   <dialog ref="dialog" @close="visible = false" closedby="any">
-    <slot />
+    <slot v-if="visible" />
   </dialog>
 </template>
 <style scoped>

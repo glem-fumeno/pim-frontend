@@ -47,7 +47,7 @@ export function fetchFilters(): Promise<StoreFilter> {
   return fetchAPI(StoreFilter, "get", "/store/filters");
 }
 
-type StoreCreateRequest = {
+export type StoreCreateRequest = {
   name: string;
   platform: string;
   language: string;

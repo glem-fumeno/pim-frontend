@@ -1,71 +1,82 @@
 <script setup lang="ts">
 import type { APIError } from "@/api/agent";
-import { deleteStore, fetchStore, updateStore, type Store } from "@/api/stores";
+import { createStore, type StoreCreateRequest } from "@/api/stores";
 import Button from "@/components/Button.vue";
 import Icon from "@/components/Icon.vue";
 import Input from "@/components/Input.vue";
 import Modal from "@/components/Modal.vue";
-import { timeToString } from "@/time";
-import { reactive, ref } from "vue";
+import router from "@/router";
+import { computed, reactive, ref } from "vue";
+
+const initialStore: StoreCreateRequest = {
+  name: "",
+  language: "",
+  platform: "",
+};
+
+const store: StoreCreateRequest = reactive(structuredClone(initialStore));
+const initialErrors = {
+  name: "",
+  platform: "",
+  language: "",
+  channel: "",
+};
+const errors = reactive(structuredClone(initialErrors));
+const modal = ref<InstanceType<typeof Modal>>();
 
 const props = defineProps<{
   reload?: () => void;
 }>();
 
-const confirmDelete = ref<boolean>(false);
-const nameError = ref<string>("");
-
-const store: Store = reactive({
-  store_id: "",
-  name: "",
-  platform: "",
-  language: "",
-  channel: "",
-  created_at: new Date(),
-  updated_at: new Date(),
-});
-
-const modal = ref<InstanceType<typeof Modal>>();
-
-function loadData(model: Store) {
-  Object.assign(store, model);
-}
-
-function open(id: string) {
-  store.store_id = id;
-  fetchStore(store.store_id).then(loadData);
+function open() {
+  Object.assign(store, initialStore);
+  Object.assign(errors, initialErrors);
   modal.value?.open();
-  nameError.value = "";
-  confirmDelete.value = false;
 }
 
 defineExpose({
   open,
 });
 
-function remove() {
-  if (confirmDelete.value) {
-    deleteStore(store.store_id);
-    modal.value?.close();
-    props.reload!();
-  } else {
-    confirmDelete.value = true;
+const header = computed<string>(() => {
+  if (store.name === "") {
+    return "New Store";
   }
-}
+  return store.name;
+});
 
-function update() {
-  updateStore(store.store_id, { name: store.name })
-    .then((store) => {
-      loadData(store);
+const channel = computed<string>(() => {
+  if (store.platform === "" || store.language === "") {
+    return "";
+  }
+  return `${store.platform}_${store.language}`;
+});
+
+const submitDisabled = computed<boolean>(() => {
+  return store.name === "" || store.platform === "" || store.language === "";
+});
+
+function submit() {
+  Object.assign(errors, initialErrors);
+  createStore(store)
+    .then(() => {
+      router.push({ name: "stores" });
+      modal.value?.close();
       props.reload!();
     })
     .catch((e) => {
       if (e.detail === "name already exists") {
-        nameError.value = e.detail;
+        errors.name = e.detail;
+      } else if (e.detail === "channel already exists") {
+        errors.channel = e.detail;
       } else if (e[0].location !== undefined) {
         e.forEach((err: APIError) => {
           if (err.location === "name") {
-            nameError.value = err.detail.replace("String", "name");
+            errors.name = err.detail.replace("String", "name");
+          } else if (err.location === "platform") {
+            errors.platform = err.detail.replace("String", "platform");
+          } else if (err.location === "language") {
+            errors.language = err.detail.replace("String", "language");
           } else {
             console.error(err);
           }
@@ -77,50 +88,37 @@ function update() {
 }
 </script>
 <template>
-  <Modal ref="modal">
+  <Modal centered ref="modal">
     <div class="main">
       <div class="header">
-        <h1>{{ store.name }}</h1>
+        <h1>{{ header }}</h1>
         <button @click="modal?.close()">
           <Icon icon="xmark" />
         </button>
       </div>
-      <form @submit.prevent="update">
+      <form @submit.prevent="submit">
         <Input
           v-model="store.name"
           label="Name"
-          :error-message="nameError"
+          :error-message="errors.name"
           class="input" />
         <Input
           v-model="store.platform"
           label="Platform"
-          disabled
+          :error-message="errors.platform"
           class="input" />
         <Input
           v-model="store.language"
           label="Language"
+          :error-message="errors.language"
+          class="input" />
+        <Input
+          v-model="channel"
+          label="Channel"
+          :error-message="errors.channel"
           disabled
           class="input" />
-        <Input v-model="store.channel" label="Channel" disabled class="input" />
-        <span class="date">
-          <span class="label">Created at:</span>
-          <span class="value">{{ timeToString(store.created_at) }}</span>
-        </span>
-        <span class="date">
-          <span class="label">Updated at:</span>
-          <span class="value">{{ timeToString(store.updated_at) }}</span>
-        </span>
-        <span class="buttons">
-          <Button
-            icon="trash-can"
-            variant="secondary"
-            color="var(--color-error)"
-            @click.prevent="remove">
-            <span v-if="confirmDelete">Confirm</span>
-            <span v-else>Delete</span>
-          </Button>
-          <Button>Update</Button>
-        </span>
+        <Button :disabled="submitDisabled">Submit</Button>
       </form>
     </div>
   </Modal>
@@ -185,10 +183,8 @@ form {
 .input {
   width: 100%;
 }
-.buttons {
-  margin-top: 8px;
-  display: flex;
-  justify-content: space-between;
+form button {
+  place-self: end;
 }
 .error {
   color: var(--color-error);
@@ -196,14 +192,5 @@ form {
   border: 2px solid var(--color-error);
   border-radius: 8px;
   padding: 4px;
-}
-
-.date {
-  display: flex;
-  width: 100%;
-  justify-content: space-between;
-}
-.date .value {
-  color: var(--color-text-dim);
 }
 </style>

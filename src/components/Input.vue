@@ -32,16 +32,18 @@ function clear() {
   <label>
     {{ label }}
     <div class="input-wrapper">
-      <input :disabled :placeholder :class="{ error }" v-model="value" />
+      <input
+        :disabled
+        :placeholder="placeholder ?? label"
+        :class="{ error }"
+        v-model="value" />
       <div class="button-wrapper" v-if="value.length > 0 && !disabled">
         <button type="button" @click="clear" tabindex="-1">
           <Icon icon="xmark" :size="16" />
         </button>
       </div>
     </div>
-    <span class="error" v-if="errorMessage !== undefined">{{
-      errorMessage
-    }}</span>
+    <span class="error" v-if="errorMessage">{{ errorMessage }}</span>
   </label>
 </template>
 

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { fetchFilters, fetchStores, type StoreShort } from "@/api/stores";
-import Breadcrumbs from "@/components/Breadcrumbs.vue";
 import Button from "@/components/Button.vue";
 import Select from "@/components/dropdown/Select.vue";
 import Input from "@/components/Input.vue";
@@ -8,15 +7,16 @@ import Modal from "@/components/Modal.vue";
 import Spinner from "@/components/Spinner.vue";
 import Table from "@/components/table/Table.vue";
 import { computed, onMounted, ref, type Ref } from "vue";
-import StoreAdd from "./StoreAdd.vue";
 import { useRoute, useRouter } from "vue-router";
-import StoreRead from "./StoreRead.vue";
+
+defineProps<{
+  openCreate?: () => void;
+  openRead?: (id: string) => void;
+}>();
 
 const route = useRoute();
 const router = useRouter();
 const filterModal = ref<InstanceType<typeof Modal>>();
-const readModal = ref<InstanceType<typeof Modal>>();
-const createModal = ref<InstanceType<typeof Modal>>();
 
 const searchTerm: Ref<string> = ref("");
 const languageFilters: Ref<string[]> = ref([]);
@@ -32,8 +32,6 @@ const sortColumn = ref("name");
 
 const dataLoaded = ref(false);
 const stores: Ref<StoreShort[]> = ref([]);
-
-const storeId: Ref<string | undefined> = ref();
 
 const columns: Ref<Record<string, Record<string, any>>> = ref({
   name: { name: "Name", sortable: true, sortAsc: true },
@@ -64,10 +62,7 @@ function loadData() {
     language: languageFilter.value,
     platform: platformFilter.value,
   };
-  router.push({
-    name: "stores",
-    query: query,
-  });
+  router.push({ name: "stores", query: query });
   fetchStores(query).then((results) => {
     stores.value = results;
     dataLoaded.value = true;
@@ -92,16 +87,6 @@ onMounted(() => {
   loadData();
 });
 
-function afterCreate() {
-  loadData();
-  createModal.value?.close();
-}
-
-function reload() {
-  loadData();
-  readModal.value?.close();
-}
-
 function applyFilters() {
   loadData();
   filterModal.value?.close();
@@ -114,93 +99,67 @@ function clearFilters() {
   loadData();
 }
 
-function openStore(idField: string) {
-  storeId.value = idField;
-  readModal.value?.show();
-}
+defineExpose({
+  loadData,
+});
 </script>
 
 <template>
-  <div class="main">
-    <div class="header">
-      <Breadcrumbs
-        :elements="['PIM', 'Stores']"
-        :nav="[null, { name: 'stores' }]" />
-      <h1>Stores</h1>
-    </div>
-    <div class="content">
-      <div class="content-header">
-        <form class="search-field" @submit.prevent="loadData">
-          <Input placeholder="Search" v-model="searchTerm" @clear="loadData" />
-          <Button icon="magnifying-glass"></Button>
-          <Button
-            @click.prevent="
-              loadFilters();
-              filterModal?.show();
-            "
-            icon="filter"
-            variant="secondary"
-            class="filter-button">
-            <span v-if="filterCount > 0">{{ filterCount }}</span>
-          </Button>
-          <Modal class="filter-modal" ref="filterModal">
-            <form v-if="filtersLoaded" @submit.prevent="applyFilters">
-              <span>Language</span>
-              <Select
-                :options="languageFilters"
-                placeholder="language"
-                v-model="languageFilter"
-                class="filter" />
-              <span>Platform</span>
-              <Select
-                :options="platformFilters"
-                placeholder="platform"
-                v-model="platformFilter"
-                class="filter" />
-              <Button class="submit">Submit</Button>
-            </form>
-            <div class="spinner" v-else>
-              <Spinner />
-            </div>
-          </Modal>
-          <button
-            class="clear"
-            v-if="filterCount > 0"
-            @click.prevent="clearFilters">
-            clear filters
-          </button>
-        </form>
+  <div class="content">
+    <div class="content-header">
+      <form class="search-field" @submit.prevent="loadData">
+        <Input placeholder="Search" v-model="searchTerm" @clear="loadData" />
+        <Button icon="magnifying-glass"></Button>
         <Button
-          icon="plus"
+          @click.prevent="
+            loadFilters();
+            filterModal?.open();
+          "
+          icon="filter"
           variant="secondary"
-          @click.prevent="createModal?.show()">
-          Add
+          class="filter-button">
+          <span v-if="filterCount > 0">{{ filterCount }}</span>
         </Button>
-      </div>
-      <Modal centered ref="createModal">
-        <StoreAdd
-          v-if="createModal?.visible"
-          @create="afterCreate"
-          @close="createModal?.close()" />
-      </Modal>
-      <Modal centered ref="readModal">
-        <StoreRead
-          v-if="readModal?.visible && storeId !== undefined"
-          :storeId="storeId"
-          @delete="reload"
-          @update="loadData()"
-          @close="readModal?.close()" />
-      </Modal>
-      <Table
-        v-if="dataLoaded"
-        :columns="columns"
-        :data="stores"
-        id-field="store_id"
-        @select="openStore"
-        :sort-by="sortBy" />
-      <div class="spinner" v-else>
-        <Spinner />
-      </div>
+        <Modal class="filter-modal" ref="filterModal">
+          <form v-if="filtersLoaded" @submit.prevent="applyFilters">
+            <span>Language</span>
+            <Select
+              :options="languageFilters"
+              placeholder="language"
+              v-model="languageFilter"
+              class="filter" />
+            <span>Platform</span>
+            <Select
+              :options="platformFilters"
+              placeholder="platform"
+              v-model="platformFilter"
+              class="filter" />
+            <Button class="submit">Submit</Button>
+          </form>
+          <div class="spinner" v-else>
+            <Spinner />
+          </div>
+        </Modal>
+        <button
+          class="clear"
+          v-if="filterCount > 0"
+          @click.prevent="clearFilters">
+          clear filters
+        </button>
+      </form>
+      <Button icon="plus" variant="secondary" @click.prevent="openCreate!()">
+        Add
+      </Button>
+    </div>
+    <Table
+      v-if="dataLoaded"
+      :columns="columns"
+      :data="stores"
+      id-field="store_id"
+      @select="openRead"
+      :sort-by="sortBy" />
+    <div class="spinner" v-else>
+      <Spinner />
     </div>
   </div>
 </template>

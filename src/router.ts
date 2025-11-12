@@ -1,6 +1,6 @@
 import Root from "@/routes/Root.vue";
 import { createRouter, createWebHistory } from "vue-router";
-import StoreList from "./routes/stores/StoreList.vue";
+import Stores from "./routes/stores/Stores.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -33,7 +33,7 @@ const router = createRouter({
     {
       name: "stores",
       path: "/stores",
-      component: StoreList,
+      component: Stores,
     },
   ],
 });
