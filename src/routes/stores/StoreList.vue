@@ -85,12 +85,8 @@ onMounted(() => {
   languageFilter.value = (route.query.language as string) ?? undefined;
   platformFilter.value = (route.query.platform as string) ?? undefined;
   loadData();
+  loadFilters();
 });
-
-function applyFilters() {
-  loadData();
-  filterModal.value?.close();
-}
 
 function clearFilters() {
   searchTerm.value = "";
@@ -107,49 +103,43 @@ defineExpose({
 <template>
   <div class="content">
     <div class="content-header">
-      <form class="search-field" @submit.prevent="loadData">
-        <Input placeholder="Search" v-model="searchTerm" @clear="loadData" />
-        <Button icon="magnifying-glass"></Button>
-        <Button
-          @click.prevent="
-            loadFilters();
-            filterModal?.open();
-          "
-          icon="filter"
-          variant="secondary"
-          class="filter-button">
-          <span v-if="filterCount > 0">{{ filterCount }}</span>
+      <div class="search-header">
+        <form class="search-field" @submit.prevent="loadData">
+          <Input placeholder="Search" v-model="searchTerm" @clear="loadData" />
+          <Button icon="magnifying-glass"></Button>
+          <Button
+            @click.prevent="
+              loadFilters();
+              filterModal?.open();
+            "
+            icon="filter"
+            variant="secondary"
+            class="filter-button">
+            <span v-if="filterCount > 0">{{ filterCount }}</span>
+          </Button>
+          <Select
+            :options="platformFilters"
+            placeholder="platform"
+            v-model="platformFilter"
+            @select="loadData()"
+            class="filter" />
+          <Select
+            :options="languageFilters"
+            placeholder="language"
+            v-model="languageFilter"
+            @select="loadData()"
+            class="filter" />
+          <button
+            class="clear"
+            v-if="filterCount > 0"
+            @click.prevent="clearFilters">
+            clear filters
+          </button>
+        </form>
+        <Button icon="plus" variant="secondary" @click.prevent="openCreate!()">
+          Add
         </Button>
-        <Modal class="filter-modal" ref="filterModal">
-          <form v-if="filtersLoaded" @submit.prevent="applyFilters">
-            <span>Language</span>
-            <Select
-              :options="languageFilters"
-              placeholder="language"
-              v-model="languageFilter"
-              class="filter" />
-            <span>Platform</span>
-            <Select
-              :options="platformFilters"
-              placeholder="platform"
-              v-model="platformFilter"
-              class="filter" />
-            <Button class="submit">Submit</Button>
-          </form>
-          <div class="spinner" v-else>
-            <Spinner />
-          </div>
-        </Modal>
-        <button
-          class="clear"
-          v-if="filterCount > 0"
-          @click.prevent="clearFilters">
-          clear filters
-        </button>
-      </form>
-      <Button icon="plus" variant="secondary" @click.prevent="openCreate!()">
-        Add
-      </Button>
+      </div>
     </div>
     <Table
       v-if="dataLoaded"
@@ -177,6 +167,21 @@ defineExpose({
   background-color: var(--color-surface-0);
   border-radius: 1rem;
   padding: 1rem;
+}
+.content-header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.search-header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.filters {
+  display: flex;
+  gap: 16px;
 }
 
 h1 {
@@ -250,9 +255,5 @@ h1 {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-}
-.content-header {
-  display: flex;
-  justify-content: space-between;
 }
 </style>

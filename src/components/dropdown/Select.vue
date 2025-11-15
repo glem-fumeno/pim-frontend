@@ -6,6 +6,9 @@ defineProps<{
   options: string[];
   placeholder?: string;
 }>();
+const emit = defineEmits<{
+  select: [];
+}>();
 
 const selected: ModelRef<string | undefined> = defineModel();
 const open = ref(false);
@@ -17,6 +20,7 @@ function toggleOpen() {
 function selectOption(option: string) {
   selected.value = selected.value === option ? undefined : option;
   toggleOpen();
+  emit("select")
 }
 </script>
 <template>
