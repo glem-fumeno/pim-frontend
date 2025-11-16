@@ -1,16 +1,17 @@
 :root {
-  --color-background: #111210;
-  --color-surface-0: #151714;
-  --color-surface-1: #1A1C19;
-  --color-surface-2: #1F211E;
+  --color-background: oklch(0.18 0.0060 135);
+  --color-surface-0: oklch(0.20 0.0060 135);
+  --color-surface-1: oklch(0.22 0.0060 135);
+  --color-surface-2: oklch(0.24 0.0060 135);
+  --color-surface-3: oklch(0.26 0.0060 135);
 
-  --color-text: #F5F9F2;
-  --color-text-dim: #A7ABA4;
+  --color-text: oklch(0.90 0.02 135);
+  --color-text-dim: oklch(0.70 0.02 135);
 
-  --color-primary: #85B960;
-  --color-primary-shade: #6EA148;
-  --color-primary-shadier: #61933A;
-  --color-primary-disabled: #86967C;
+  --color-primary: oklch(0.75 0.120 135);
+  --color-primary-shade: oklch(0.70 0.120 135);
+  --color-primary-shadier: oklch(0.65 0.120 135);
+  --color-primary-disabled: oklch(0.65 0.060 135);
 
   --color-error: #FC7476;
 

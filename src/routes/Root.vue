@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import Button from "@/components/Button.vue";
 import Checkbox from "@/components/Checkbox.vue";
-import Multiselect from "@/components/dropdown/Multiselect.vue";
-import Select from "@/components/dropdown/Select.vue";
+import Dropdown from "@/components/Dropdown.vue";
 import Input from "@/components/Input.vue";
 import Radio from "@/components/Radio.vue";
 import { ref } from "vue";
@@ -49,11 +48,8 @@ const checkbox = ref(true);
       </div>
       <Input label="Input" placeholder="Input" />
       <Input label="Error" placeholder="Error" error-message="error" />
-      <Select
-        placeholder="Select"
-        :options="['Option 1', 'Option 2', 'Option 3']" />
-      <Multiselect
-        placeholder="Multiselect"
+      <Dropdown
+        placeholder="Dropdown"
         :options="['Option 1', 'Option 2', 'Option 3']" />
     </div>
   </div>

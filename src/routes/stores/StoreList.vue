@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { fetchFilters, fetchStores, type StoreShort } from "@/api/stores";
 import Button from "@/components/Button.vue";
-import Select from "@/components/dropdown/Select.vue";
+import Dropdown from "@/components/Dropdown.vue";
 import Input from "@/components/Input.vue";
 import Modal from "@/components/Modal.vue";
 import Spinner from "@/components/Spinner.vue";
@@ -117,13 +117,13 @@ defineExpose({
             class="filter-button">
             <span v-if="filterCount > 0">{{ filterCount }}</span>
           </Button>
-          <Select
+          <Dropdown
             :options="platformFilters"
             placeholder="platform"
             v-model="platformFilter"
             @select="loadData()"
             class="filter" />
-          <Select
+          <Dropdown
             :options="languageFilters"
             placeholder="language"
             v-model="languageFilter"
