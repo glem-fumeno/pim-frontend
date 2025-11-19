@@ -1,67 +1,81 @@
 <script setup lang="ts">
-import { fetchFilters, fetchStores, type StoreShort } from "@/api/stores";
-import Button from "@/components/Button.vue";
-import Dropdown from "@/components/Dropdown.vue";
-import Input from "@/components/Input.vue";
-import Modal from "@/components/Modal.vue";
-import Spinner from "@/components/Spinner.vue";
-import Table from "@/components/table/Table.vue";
-import { computed, onMounted, ref, type Ref } from "vue";
+import {
+  fetchFilters,
+  fetchStores,
+  type StoreColumn,
+  type StoreShort,
+} from "@/api/stores";
+import { timeToString } from "@/time";
+import { Plus, Search } from "@vicons/fa";
+import { NButton, NDataTable, NIcon, NInput } from "naive-ui";
+import type {
+  FilterState,
+  SortState,
+  TableBaseColumn,
+} from "naive-ui/es/data-table/src/interface";
+import { onMounted, ref, type Ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-
-defineProps<{
+const props = defineProps<{
   openCreate?: () => void;
   openRead?: (id: string) => void;
 }>();
 
 const route = useRoute();
 const router = useRouter();
-const filterModal = ref<InstanceType<typeof Modal>>();
 
+const sortBy: Ref<StoreColumn> = ref("name");
+const sortAsc: Ref<boolean> = ref(true);
 const searchTerm: Ref<string> = ref("");
-const languageFilters: Ref<string[]> = ref([]);
-const languageFilter: Ref<string | undefined> = ref();
-const platformFilters: Ref<string[]> = ref([]);
-const platformFilter: Ref<string | undefined> = ref();
-const filterCount = computed(() => {
-  const filters = [languageFilter.value, platformFilter.value];
-  return filters.filter((value) => value !== undefined).length;
-});
-const filtersLoaded = ref(false);
-const sortColumn = ref("name");
+const languageFilter: Ref<string | null> = ref(null);
+const platformFilter: Ref<string | null> = ref(null);
 
 const dataLoaded = ref(false);
 const stores: Ref<StoreShort[]> = ref([]);
 
-const columns: Ref<Record<string, Record<string, any>>> = ref({
-  name: { name: "Name", sortable: true, sortAsc: true },
-  channel: { name: "Channel", sortable: true },
-  platform: { name: "Platform" },
-  language: { name: "Language" },
-  updated_at: { name: "Updated at", type: "date", sortable: true },
-});
+const columns: Ref<TableBaseColumn<StoreShort>[]> = ref<
+  TableBaseColumn<StoreShort>[]
+>([
+  { key: "name", title: "Name", sorter: true, defaultSortOrder: "ascend" },
+  { key: "channel", title: "Channel", sorter: true },
+  { key: "platform", title: "Platform", filterMultiple: false },
+  { key: "language", title: "Language", filterMultiple: false },
+  {
+    key: "updated_at",
+    title: "Updated at",
+    sorter: true,
+    render: (row: StoreShort) => timeToString(row.updated_at),
+  },
+]);
+const invertedsort: StoreColumn[] = ["name", "channel", "updated_at"];
+const columnmap: Record<StoreColumn, number | undefined> = {
+  store_id: undefined,
+  name: 0,
+  channel: 1,
+  platform: 2,
+  language: 3,
+  updated_at: 4,
+};
 
-function sortBy(column: string) {
-  let store = columns.value[sortColumn.value]!;
-  if (sortColumn.value === column) {
-    store.sortAsc = !store.sortAsc;
-  } else {
-    store.sortAsc = undefined;
-    sortColumn.value = column;
-    store = columns.value[sortColumn.value]!;
-    store.sortAsc = true;
-  }
-  loadData();
+function rowProps(row: StoreShort) {
+  return {
+    style: "cursor: pointer;",
+    onClick: () => {
+      props.openRead!(row.store_id);
+    },
+  };
 }
 
 function loadData() {
   const query = {
     query: searchTerm.value,
-    sort_by: sortColumn.value,
-    sort_asc: columns.value[sortColumn.value]!.sortAsc,
-    language: languageFilter.value,
-    platform: platformFilter.value,
+    language: languageFilter.value ?? undefined,
+    sort_by: sortBy.value,
+    sort_asc: sortAsc.value.toString(),
+    platform: platformFilter.value ?? undefined,
   };
+  columns.value[columnmap[sortBy.value]!]!.sortOrder = sortAsc.value
+    ? "ascend"
+    : "descend";
   router.push({ name: "stores", query: query });
   fetchStores(query).then((results) => {
     stores.value = results;
@@ -71,27 +85,50 @@ function loadData() {
 
 function loadFilters() {
   fetchFilters().then((filters) => {
-    languageFilters.value = filters.languages;
-    platformFilters.value = filters.platforms;
-    filtersLoaded.value = true;
+    columns.value[columnmap.language!]!.filter = true;
+    columns.value[columnmap.language!]!.filterOptionValue =
+      languageFilter.value;
+    columns.value[columnmap.language!]!.filterOptions = filters.languages.map(
+      (l) => ({ label: l, value: l }),
+    );
+    columns.value[columnmap.platform!]!.filter = true;
+    columns.value[columnmap.platform!]!.filterOptionValue =
+      platformFilter.value;
+    columns.value[columnmap.platform!]!.filterOptions = filters.platforms.map(
+      (l) => ({ label: l, value: l }),
+    );
   });
 }
 
 onMounted(() => {
   searchTerm.value = (route.query.query as string) ?? "";
-  sortColumn.value = (route.query.sort_by as string) ?? "name";
-  columns.value[sortColumn.value]!.sortAsc =
-    ((route.query.sort_asc as string) ?? "true") === "true";
-  languageFilter.value = (route.query.language as string) ?? undefined;
-  platformFilter.value = (route.query.platform as string) ?? undefined;
+  sortAsc.value = (route.query.sort_asc as string) === "true";
+  sortBy.value = (route.query.sort_by as StoreColumn) ?? "name";
+  languageFilter.value = (route.query.language as string) ?? null;
+  platformFilter.value = (route.query.platform as string) ?? null;
   loadData();
   loadFilters();
 });
 
-function clearFilters() {
+function clearSearch() {
   searchTerm.value = "";
-  languageFilter.value = undefined;
-  platformFilter.value = undefined;
+  loadData();
+}
+
+function onsort(state: SortState) {
+  const column: StoreColumn = state.columnKey as StoreColumn;
+  columns.value[columnmap[sortBy.value]!]!.sortOrder = false;
+  if (state.order === "descend" && invertedsort.includes(column))
+    state.order = "ascend";
+  sortBy.value = column;
+  sortAsc.value = state.order === "ascend";
+  loadData();
+}
+function onfilter(state: FilterState) {
+  languageFilter.value = (state["language"] as string) ?? null;
+  columns.value[columnmap.language!]!.filterOptionValue = languageFilter.value;
+  platformFilter.value = (state["platform"] as string) ?? null;
+  columns.value[columnmap.platform!]!.filterOptionValue = platformFilter.value;
   loadData();
 }
 
@@ -101,73 +138,40 @@ defineExpose({
 </script>
 
 <template>
-  <div class="content">
-    <div class="content-header">
-      <div class="search-header">
-        <form class="search-field" @submit.prevent="loadData">
-          <Input placeholder="Search" v-model="searchTerm" @clear="loadData" />
-          <Button icon="magnifying-glass"></Button>
-          <Button
-            @click.prevent="
-              loadFilters();
-              filterModal?.open();
-            "
-            icon="filter"
-            variant="secondary"
-            class="filter-button">
-            <span v-if="filterCount > 0">{{ filterCount }}</span>
-          </Button>
-          <Dropdown
-            :options="platformFilters"
-            placeholder="platform"
-            v-model="platformFilter"
-            @select="loadData()"
-            class="filter" />
-          <Dropdown
-            :options="languageFilters"
-            placeholder="language"
-            v-model="languageFilter"
-            @select="loadData()"
-            class="filter" />
-          <button
-            class="clear"
-            v-if="filterCount > 0"
-            @click.prevent="clearFilters">
-            clear filters
-          </button>
-        </form>
-        <Button icon="plus" variant="secondary" @click.prevent="openCreate!()">
-          Add
-        </Button>
-      </div>
-    </div>
-    <Table
-      v-if="dataLoaded"
-      :columns="columns"
-      :data="stores"
-      id-field="store_id"
-      @select="openRead"
-      :sort-by="sortBy" />
-    <div class="spinner" v-else>
-      <Spinner />
+  <div class="content-header">
+    <div class="search-header">
+      <form class="search-field" @submit.prevent="loadData">
+        <n-input-group>
+          <n-input
+            placeholder="Search"
+            v-model:value="searchTerm"
+            clearable
+            @clear="clearSearch"
+            size="large" />
+          <n-button type="primary" primary attr-type="submit" size="large">
+            <template #icon>
+              <n-icon :size="16"><Search /></n-icon>
+            </template>
+          </n-button>
+        </n-input-group>
+      </form>
+      <n-button @click.prevent="openCreate!()" size="large">
+        <template #icon>
+          <n-icon :size="16"> <Plus /></n-icon>
+        </template>
+        Add
+      </n-button>
     </div>
   </div>
+  <n-data-table
+    :columns="columns"
+    :data="stores"
+    :row-props="rowProps"
+    @update:sorter="onsort"
+    @update:filters="onfilter" />
 </template>
 
 <style scoped>
-.main {
-  padding: 8px;
-  flex: 1;
-  gap: 8px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.header {
-  background-color: var(--color-surface-0);
-  border-radius: 1rem;
-  padding: 1rem;
-}
 .content-header {
   display: flex;
   flex-direction: column;
@@ -177,11 +181,6 @@ defineExpose({
 .search-header {
   display: flex;
   justify-content: space-between;
-}
-
-.filters {
-  display: flex;
-  gap: 16px;
 }
 
 h1 {
@@ -204,56 +203,5 @@ h1 {
   display: flex;
   gap: 8px;
   align-items: center;
-}
-.spinner {
-  display: grid;
-  place-items: center;
-  height: 100%;
-}
-
-.filter-modal {
-  align-self: normal;
-}
-.filter-modal form {
-  display: grid;
-  gap: 8px;
-  place-items: start;
-  width: 200px;
-}
-
-.filter-modal .filter {
-  width: 100%;
-}
-
-.filter-modal .submit {
-  place-self: end;
-}
-.clear {
-  display: flex;
-  border: none;
-  background-color: transparent;
-  font: unset;
-  align-items: center;
-  justify-items: baseline;
-  gap: 4px;
-  color: var(--color-error);
-  height: 20px;
-  cursor: pointer;
-}
-.clear:hover {
-  text-decoration: underline;
-}
-.filter-button {
-  position: relative;
-}
-.filter-button span {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  background-color: var(--color-primary);
-  color: var(--color-surface-1);
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
 }
 </style>

@@ -12,6 +12,14 @@ const StoreShort = z.object({
 
 export type StoreShort = z.infer<typeof StoreShort>;
 
+export type StoreColumn =
+  | "store_id"
+  | "name"
+  | "channel"
+  | "platform"
+  | "language"
+  | "updated_at";
+
 export function fetchStores(query: Record<string, any>): Promise<StoreShort[]> {
   return fetchAPI(z.array(StoreShort), "get", "/store", undefined, query);
 }

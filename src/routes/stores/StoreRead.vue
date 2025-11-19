@@ -1,11 +1,18 @@
 <script setup lang="ts">
 import type { APIError } from "@/api/agent";
 import { deleteStore, fetchStore, updateStore, type Store } from "@/api/stores";
-import Button from "@/components/Button.vue";
-import Icon from "@/components/Icon.vue";
-import Input from "@/components/Input.vue";
-import Modal from "@/components/Modal.vue";
-import { timeToString } from "@/time";
+import {
+  NButton,
+  NForm,
+  NFormItem,
+  NInput,
+  NModal,
+  NFlex,
+  NTime,
+  NTabs,
+  NTabPane,
+  NSpace,
+} from "naive-ui";
 import { reactive, ref } from "vue";
 
 const props = defineProps<{
@@ -25,7 +32,7 @@ const store: Store = reactive({
   updated_at: new Date(),
 });
 
-const modal = ref<InstanceType<typeof Modal>>();
+const isOpen = ref<boolean>(false);
 
 function loadData(model: Store) {
   Object.assign(store, model);
@@ -34,7 +41,7 @@ function loadData(model: Store) {
 function open(id: string) {
   store.store_id = id;
   fetchStore(store.store_id).then(loadData);
-  modal.value?.open();
+  isOpen.value = true;
   nameError.value = "";
   confirmDelete.value = false;
 }
@@ -46,7 +53,7 @@ defineExpose({
 function remove() {
   if (confirmDelete.value) {
     deleteStore(store.store_id);
-    modal.value?.close();
+    isOpen.value = false;
     props.reload!();
   } else {
     confirmDelete.value = true;
@@ -77,133 +84,68 @@ function update() {
 }
 </script>
 <template>
-  <Modal ref="modal">
-    <div class="main">
-      <div class="header">
-        <h1>{{ store.name }}</h1>
-        <button @click="modal?.close()">
-          <Icon icon="xmark" />
-        </button>
-      </div>
-      <form @submit.prevent="update">
-        <Input
-          v-model="store.name"
-          label="Name"
-          :error-message="nameError"
-          class="input" />
-        <Input
-          v-model="store.platform"
-          label="Platform"
-          disabled
-          class="input" />
-        <Input
-          v-model="store.language"
-          label="Language"
-          disabled
-          class="input" />
-        <Input v-model="store.channel" label="Channel" disabled class="input" />
-        <span class="date">
-          <span class="label">Created at:</span>
-          <span class="value">{{ timeToString(store.created_at) }}</span>
-        </span>
-        <span class="date">
-          <span class="label">Updated at:</span>
-          <span class="value">{{ timeToString(store.updated_at) }}</span>
-        </span>
-        <span class="buttons">
-          <Button
-            icon="trash-can"
-            variant="secondary"
-            color="var(--color-error)"
-            @click.prevent="remove">
-            <span v-if="confirmDelete">Confirm</span>
-            <span v-else>Delete</span>
-          </Button>
-          <Button>Update</Button>
-        </span>
-      </form>
-    </div>
-  </Modal>
+  <n-modal
+    v-model:show="isOpen"
+    preset="card"
+    style="width: 500px"
+    :title="store.name">
+    <n-tabs animated>
+      <n-tab-pane name="General">
+        <n-form v-model="store">
+          <n-form-item
+            label="Name"
+            path="name"
+            :validation-status="nameError ? 'error' : undefined"
+            :feedback="nameError">
+            <n-input v-model:value="store.name" placeholder="Name" />
+          </n-form-item>
+          <n-form-item label="Platform">
+            <n-input
+              v-model:value="store.platform"
+              placeholder="Platform"
+              disabled />
+          </n-form-item>
+          <n-form-item label="Language">
+            <n-input
+              v-model:value="store.language"
+              placeholder="Language"
+              disabled />
+          </n-form-item>
+          <n-form-item label="Channel">
+            <n-input
+              v-model:value="store.channel"
+              placeholder="Channel"
+              disabled />
+          </n-form-item>
+          <n-flex justify="flex-end">
+            <n-button size="large" @click.prevent="update" type="primary">
+              Update
+            </n-button>
+          </n-flex>
+        </n-form>
+      </n-tab-pane>
+      <n-tab-pane name="Settings">
+        <n-space vertical>
+          <n-flex justify="space-between">
+            <strong>Created at</strong>
+            <n-time :time="store.created_at" />
+          </n-flex>
+          <n-flex justify="space-between">
+            <strong>Updated at</strong>
+            <n-time :time="store.updated_at" />
+          </n-flex>
+          <n-flex justify="flex-end">
+            <n-button
+              size="large"
+              @click.prevent="remove"
+              type="error"
+              :ghost="!confirmDelete">
+              {{ confirmDelete ? "Confirm?" : "Delete" }}
+            </n-button>
+          </n-flex>
+        </n-space>
+      </n-tab-pane>
+    </n-tabs>
+  </n-modal>
 </template>
-
-<style scoped>
-.main {
-  padding: 8px;
-  flex: 1;
-  gap: 8px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 400px;
-}
-
-.header button {
-  border: none;
-  cursor: pointer;
-  border-radius: 4px;
-  padding: 8px;
-  background-color: var(--color-surface-0);
-}
-.header button:hover {
-  background-color: var(--color-surface-1);
-}
-.header button:active {
-  background-color: var(--color-surface-2);
-}
-
-h1 {
-  padding: 0;
-  margin: 8px 0px;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-.content {
-  gap: 8px;
-  display: grid;
-  overflow: hidden;
-  place-items: center;
-  width: 100%;
-  flex: 1;
-  background-color: var(--color-surface-0);
-  border-radius: 1rem;
-  padding: 1rem;
-}
-form {
-  width: fit-content;
-  display: flex;
-  flex-direction: column;
-  width: 400px;
-  gap: 16px;
-}
-.input {
-  width: 100%;
-}
-.buttons {
-  margin-top: 8px;
-  display: flex;
-  justify-content: space-between;
-}
-.error {
-  color: var(--color-error);
-  background-color: var(--color-surface-0);
-  border: 2px solid var(--color-error);
-  border-radius: 8px;
-  padding: 4px;
-}
-
-.date {
-  display: flex;
-  width: 100%;
-  justify-content: space-between;
-}
-.date .value {
-  color: var(--color-text-dim);
-}
-</style>
+<style scoped></style>

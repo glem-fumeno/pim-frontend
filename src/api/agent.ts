@@ -11,7 +11,9 @@ export function fetchAPI(
   if (params !== undefined) {
     query += "?";
     Object.keys(params).forEach((key) =>
-      params[key] === undefined ? delete params[key] : {},
+      params[key] === undefined || params[key] === null
+        ? delete params[key]
+        : {},
     );
     query += new URLSearchParams(params);
   }

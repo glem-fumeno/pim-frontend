@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 import Icon from "@/components/Icon.vue";
 
 defineProps<{
@@ -15,6 +15,8 @@ const open = ref<boolean>(false);
 
 const selected = defineModel<string>();
 
+const selectElement = ref<HTMLDivElement>();
+
 function toggle() {
   open.value = !open.value;
 }
@@ -24,19 +26,30 @@ function select(value: string) {
   open.value = false;
   emit("select");
 }
+
+const closeWhenClickedOutside = (e: MouseEvent) => {
+  if (e.target instanceof Node && !selectElement.value?.contains(e.target)) {
+    open.value = false;
+  }
+};
+onMounted(() => document.addEventListener("click", closeWhenClickedOutside));
+onUnmounted(() =>
+  document.removeEventListener("click", closeWhenClickedOutside),
+);
 </script>
 
 <template>
-  <div class="select">
-    <div class="fake-length">
-      <div v-for="option in options">
-        {{ option }}
-        <span class="arrow">
-          <Icon icon="chevron-down" />
-        </span>
+  <div class="select" ref="selectElement">
+    <div class="fake-length" aria-hidden="true">
+      <div v-for="option in options" class="fake-length-item">
+        <span>{{ option }}</span>
+        <Icon icon="chevron-down" :size="16" />
       </div>
-      <div>
-        {{ placeholder }}
+      <div class="fake-length-item">
+        <span>{{ placeholder }}</span>
+        <span class="arrow">
+          <Icon icon="chevron-down" :size="16" />
+        </span>
       </div>
     </div>
     <button class="select-button" :class="{ open, selected }" @click="toggle">
@@ -46,17 +59,21 @@ function select(value: string) {
       <span v-else class="selected-value">
         {{ selected }}
       </span>
-      <Icon icon="chevron-down" :size="16" />
+      <Icon icon="chevron-up" :size="16" v-if="open" />
+      <Icon icon="chevron-down" :size="16" v-else />
     </button>
-    <ul class="select-dropdown" :class="{ open }">
-      <li
-        v-for="option in options"
-        class="select-option"
-        :class="{ active: selected === option }"
-        @click="select(option)">
-        {{ option }}
-      </li>
-    </ul>
+    <dialog>
+      <ul class="select-dropdown" :class="{ open }">
+        <li v-for="option in options">
+          <button
+            class="select-option"
+            :class="{ active: selected === option }"
+            @click="select(option)">
+            {{ option }}
+          </button>
+        </li>
+      </ul>
+    </dialog>
   </div>
 </template>
 
@@ -69,15 +86,21 @@ function select(value: string) {
   --_dropdown-padding-inline: 2px;
   --_option-padding-inline: 4px;
   --_btn-gap: 8px;
+  --_btn-font: var(--font-content);
 }
 
 .fake-length {
   height: 0px;
   visibility: hidden;
+  font: var(--_btn-font);
   padding-inline: max(
-    var(--_btn-gap) + 2 * var(--_btn-padding-inline),
-    2 * var(--_dropdown-padding-inline) + 2 * var(--_option-padding-inline)
+    var(--_btn-gap) / 2 + var(--_btn-padding-inline),
+    var(--_dropdown-padding-inline) + var(--_option-padding-inline)
   );
+}
+
+.fake-length-item {
+  display: flex;
 }
 
 .select-button {
@@ -88,7 +111,7 @@ function select(value: string) {
   gap: var(--_btn-gap);
   width: 100%;
   padding: 12px var(--_btn-padding-inline);
-  font: var(--font-content);
+  font: var(--_btn-font);
   background-color: var(--color-surface-1);
   border: 0;
   border-bottom: 2px solid var(--color-text-dim);
@@ -107,7 +130,6 @@ function select(value: string) {
 
 .select-dropdown {
   box-sizing: border-box;
-  display: none;
   position: absolute;
   z-index: 1;
   left: 0;
@@ -128,6 +150,11 @@ function select(value: string) {
   cursor: pointer;
   padding: 8px var(--_option-padding-inline);
   user-select: none;
+  background-color: transparent;
+  width: 100%;
+  border: 0;
+  text-align: left;
+  font: var(--font-content);
 }
 
 .select-option:hover {

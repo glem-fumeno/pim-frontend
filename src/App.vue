@@ -1,89 +1,109 @@
 <script setup lang="ts">
-import Icon from "@/components/Icon.vue";
-import { ref } from "vue";
-import SidebarItem from "./components/SidebarItem.vue";
+import { h, ref, type Component } from "vue";
+import {
+  darkTheme,
+  NConfigProvider,
+  NH1,
+  NIcon,
+  NLayout,
+  NLayoutSider,
+  NModalProvider,
+  type GlobalThemeOverrides,
+  type MenuOption,
+} from "naive-ui";
+import { RouterLink, useRoute } from "vue-router";
+import { Bars, Expand, LayerGroup, Store, Stream, Wrench } from "@vicons/fa";
 
-const expanded = ref(true);
+const route = useRoute();
 
-function toggleSidebar() {
-  expanded.value = !expanded.value;
+const overrides: GlobalThemeOverrides = {
+  common: {
+    fontFamily: "Lexend",
+    borderRadius: "4px",
+    primaryColor: "#8cbf70",
+    primaryColorHover: "#7daf61",
+    primaryColorPressed: "#6e9f52",
+    inputColor: "#d8e1d422",
+    textColorBase: "#d8e1d4",
+    popoverColor: "#151714",
+    cardColor: "#151714",
+    modalColor: "#151714",
+    bodyColor: "#101210"
+  },
+  PageHeader: {
+    titleFontSize: "24px",
+  },
+  Card: {
+    titleFontSizeMedium: "20px",
+    closeIconSize: "20px",
+  },
+  DataTable: {
+    thIconColorActive: "#7daf61",
+    thColorSorting: "#00000000",
+    tdColorSorting: "#151714",
+  },
+};
+
+function getMenuOption(
+  key: string,
+  label: string,
+  icon: Component,
+): MenuOption {
+  return {
+    label: () => h(RouterLink, { to: { name: key } }, { default: () => label }),
+    key: key,
+    icon: () => h(NIcon, null, { default: () => h(icon) }),
+  };
 }
+
+const menuOptions: MenuOption[] = [
+  getMenuOption("attributes", "Attributes", Expand),
+  getMenuOption("templates", "Templates", LayerGroup),
+  getMenuOption("products", "Products", Wrench),
+  getMenuOption("categories", "Categories", Stream),
+  getMenuOption("stores", "Stores", Store),
+];
+
+const menuOpen = ref<boolean>(true);
 </script>
 
 <template>
-  <div class="app">
-    <div class="sidebar" :class="{ expanded }">
-      <h1>
-        <span v-if="expanded">
-          <img src="/favicon.svg" alt="" />
-          PIM
-        </span>
-        <button @click="toggleSidebar">
-          <Icon icon="bars" />
-        </button>
-      </h1>
-      <SidebarItem to="attributes" icon="expand" :expanded>
-        Attributes
-      </SidebarItem>
-      <SidebarItem to="templates" icon="layer-group" :expanded>
-        Templates
-      </SidebarItem>
-      <SidebarItem to="products" icon="wrench" :expanded>
-        Products
-      </SidebarItem>
-      <SidebarItem to="categories" icon="bars-staggered" :expanded>
-        Categories
-      </SidebarItem>
-      <SidebarItem to="stores" icon="store" :expanded> Stores </SidebarItem>
-    </div>
-    <router-view />
-  </div>
+  <n-config-provider :theme="darkTheme" :theme-overrides="overrides">
+    <n-modal-provider>
+      <n-dialog-provider>
+        <n-layout has-sider class="app">
+          <n-layout-sider :collapsed="!menuOpen" collapse-mode="width">
+            <n-h1>
+              <img src="/favicon.svg" alt="" v-if="menuOpen" />
+              <span v-if="menuOpen">PIM</span>
+              <n-button quaternary circle @click.prevent="menuOpen = !menuOpen">
+                <template #icon>
+                  <n-icon size="20px"><Bars /></n-icon>
+                </template>
+              </n-button>
+            </n-h1>
+            <n-menu :options="menuOptions" bordered :value="route.name" />
+          </n-layout-sider>
+          <router-view />
+        </n-layout>
+      </n-dialog-provider>
+    </n-modal-provider>
+  </n-config-provider>
 </template>
 
 <style scoped>
-
-.sidebar {
-  background-color: var(--color-surface-1);
-  height: 100%;
-  width: 52px;
-  transition: width 100ms ease-out;
-}
-
-.sidebar.expanded {
-  width: 256px;
-}
-
-.sidebar h1 {
-  background-color: var(--color-surface-1);
-  margin: 0;
-  padding: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.sidebar h1 span {
-  gap: 8px;
-  display: flex;
-  place-items: center;
-}
-
-.sidebar h1 button {
-  border: none;
-  background-color: transparent;
-  border-radius: 50%;
-  padding: 10px;
-  cursor: pointer;
-}
-
-.sidebar h1 button:hover {
-  background-color: var(--color-surface-2);
-}
-
 .app {
   display: flex;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
+}
+h1 {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  padding: 8px;
+  gap: 8px;
+  margin: 0;
 }
 </style>
